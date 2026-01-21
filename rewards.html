@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rewards - PetPal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              50: '#f0f9ff', 100: '#e0f2fe', 200: '#bae6fd', 300: '#7dd3fc',
+              400: '#38bdf8', 500: '#0ea5e9', 600: '#0284c7', 700: '#0369a1',
+              800: '#075985', 900: '#0c4a6e',
+            },
+          },
+        },
+      },
+    }
+  </script>
+</head>
+<body class="min-h-screen bg-gray-50">
+  <nav class="bg-white shadow-md sticky top-0 z-50" id="navbar"></nav>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-gray-900 mb-4">Rewards Center</h1>
+      <div class="bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-lg p-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-primary-100 mb-1">Your Points Balance</p>
+            <p class="text-4xl font-bold points-value">0</p>
+          </div>
+          <svg class="w-16 h-16 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"></path>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="mb-6">
+      <h2 class="text-2xl font-semibold text-gray-900 mb-4">Available Rewards</h2>
+      <p class="text-gray-600">Earn points with every booking! 10% of your booking total becomes points.</p>
+    </div>
+
+    <div id="rewardsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+
+    <div class="mt-8 bg-blue-50 rounded-lg p-6">
+      <h3 class="font-semibold text-gray-900 mb-2">How to Earn Points</h3>
+      <ul class="space-y-2 text-gray-700">
+        <li>• Book a pet pal - Earn 10% of booking total as points</li>
+        <li>• Complete a booking - Additional 50 points</li>
+        <li>• Leave a review - 25 points</li>
+        <li>• Refer a friend - 100 points</li>
+      </ul>
+    </div>
+  </div>
+
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/navbar.js"></script>
+  <script src="js/rewards.js"></script>
+</body>
+</html>
