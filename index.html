@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UX Stress Test Agent — MMDS</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", sans-serif; }
+    #root { min-height: 100vh; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.26.9/babel.min.js"></script>
+
+  <script type="text/babel" data-type="module">
+    const { useState, useRef, useEffect } = React;
+
+    var D = {
+      appTitle: ["UX Stress Test", "UXストレステスト"],
+      steps: [["Design Input","デザイン入力"],["Personas","ペルソナ"],["Simulation","シミュレーション"],["Risk Report","リスクレポート"]],
+      s1t: ["What are we testing?","何をテストしますか？"],
+      s1d: ["Paste code, describe a screen, or drop a screenshot.","コードを貼り付け、画面を説明、またはスクリーンショットをドロップ。"],
+      chips: [["HTML","HTML"],["Code","コード"],["Screenshot","スクリーンショット"],["Figma","Figma"],["Description","説明"]],
+      ph: ["Paste MMDS HTML prototype...","MMDS HTMLを貼り付け..."],
+      drag: ["or drag and drop","またはD&D"],
+      tokDet: ["MMDS tokens detected","MMDSトークン検出"],
+      task: ["What should the user try to do?","ユーザーは何を達成しようとしていますか？"],
+      taskPh: ["e.g. Add a question and reorder it","例：質問を追加して並べ替える"],
+      upload: ["Upload","アップロード"],
+      next: ["Next","次へ"],
+      back: ["Back","戻る"],
+      run: ["Run Simulation","シミュレーション開始"],
+      s2t: ["Who is testing?","誰がテストしますか？"],
+      s2d: ["Each tests a different failure.","各ペルソナは異なる障害をテスト。"],
+      reveals: ["Reveals","検出"],
+      customAdd: ["+ Custom persona","+ カスタムペルソナ"],
+      customHide: ["Hide custom","非表示"],
+      customPh: ["Describe persona...","ペルソナ説明..."],
+      s3t: ["Simulation in progress","シミュレーション中"],
+      s3m: [["Building models","モデル構築中"],["Simulating stress","ストレスシミュレーション中"],["Capturing frustration","フラストレーションキャプチャ中"],["Mapping to MMDS","MMDSマッピング中"],["Generating report","レポート生成中"]],
+      s4t: ["Stress Test Complete","ストレステスト完了"],
+      newT: ["New Test","新規テスト"],
+      tabs: [["Monologues","モノローグ"],["Issues","課題"],["Matrix","マトリクス"],["Wins","良い点"]],
+      noIss: ["No issues!","課題なし！"],
+      noWin: ["No highlights.","ハイライトなし。"],
+      trig: ["Triggered by","検出者"],
+      root: ["Root Cause","根本原因"],
+      dsref: ["DS Reference","DS参照"],
+      fix: ["Suggested Fix","推奨修正"],
+      cats: [["Macromill","Macromill","Survey tooling","アンケートツール"],["Accessibility","アクセシビリティ","Sensory barriers","感覚障壁"],["Stress","状況ストレス","Pressure","プレッシャー"],["Technical","技術的","Edge cases","エッジケース"]],
+    };
+
+    function T(k, lang) {
+      var v = D[k];
+      if (!v) return k;
+      return v[lang === "ja" ? 1 : 0];
+    }
+
+    var P_DATA = [
+      {id:"respondent",emoji:"📋",en:"Survey Respondent",ja:"アンケート回答者",enId:"28yo, mobile, lunch",jaId:"28歳、昼休みスマホ",enR:"Readability, progress",jaR:"可読性、進捗",color:"#0067cf",cat:0},
+      {id:"research-client",emoji:"📊",en:"Research Client",ja:"リサーチクライアント",enId:"Marketing director",jaId:"マーケ部長",enR:"Dashboard, export, jargon",jaR:"階層、エクスポート、専門用語",color:"#055cb2",cat:0},
+      {id:"survey-power-user",emoji:"⚡",en:"Survey Editor PU",ja:"サーベイエディタPU",enId:"20+ surveys/mo, keyboard",jaId:"月20件、キーボード",enR:"Shortcuts, bulk ops, undo",jaR:"ショートカット、一括操作",color:"#162331",cat:0},
+      {id:"elder",emoji:"👴",en:"Skeptical Elder",ja:"懐疑的な年配者",enId:"68yo, cataracts, tremors",jaId:"68歳、白内障、震え",enR:"Contrast, small hits",jaR:"コントラスト、小ヒット",color:"#DC2626",cat:1},
+      {id:"screen-reader",emoji:"🔇",en:"Screen Reader",ja:"スクリーンリーダー",enId:"VoiceOver/NVDA only",jaId:"VoiceOver/NVDAのみ",enR:"Missing aria, focus",jaR:"aria不足、フォーカス不備",color:"#7C3AED",cat:1},
+      {id:"colorblind",emoji:"🎨",en:"Color Blind",ja:"色覚異常",enId:"Deuteranopia",jaId:"2型色覚",enR:"Color-only states",jaR:"色のみの状態",color:"#DB2777",cat:1},
+      {id:"speed",emoji:"🏃",en:"Speed Runner",ja:"スピードランナー",enId:"32yo, 30 seconds",jaId:"32歳、30秒",enR:"Action hierarchy",jaR:"アクション階層",color:"#D97706",cat:2},
+      {id:"first-timer",emoji:"📱",en:"First-Timer",ja:"初心者",enId:"55yo, only LINE",jaId:"55歳、LINEのみ",enR:"Abstract icons, hidden nav",jaR:"抽象アイコン、隠れナビ",color:"#059669",cat:2},
+      {id:"overloaded",emoji:"🧠",en:"Overloaded",ja:"認知過負荷",enId:"34yo, video call",jaId:"34歳、ビデオ通話中",enR:"Missing progress",jaR:"プログレス不足",color:"#EA580C",cat:2},
+      {id:"keyboard",emoji:"⌨️",en:"Keyboard PU",ja:"キーボードPU",enId:"Dev, no mouse",jaId:"開発者、マウス不使用",enR:"Missing handlers",jaR:"ハンドラ不足",color:"#0891B2",cat:3},
+      {id:"intl",emoji:"🌍",en:"Internationalist",ja:"国際化テスター",enId:"German, 320px",jaId:"ドイツ語、320px",enR:"Fixed-width, broken",jaR:"固定幅、壊れた",color:"#2563EB",cat:3},
+    ];
+
+    function getP(p, lang) {
+      var j = lang === "ja";
+      return { id: p.id, emoji: p.emoji, name: j ? p.ja : p.en, identity: j ? p.jaId : p.enId, reveals: j ? p.jaR : p.enR, color: p.color, cat: p.cat };
+    }
+
+    var TK_MAP = {"--color-text-accent":"#055cb2","--color-text-medium":"rgba(10,24,38,0.71)","--color-object-high":"#162331","--color-surface-primary":"#0067cf"};
+    var COMPS = ["IconButton","Toast","TextInput","Button","Badge","Card","Modal","Dialog","Dropdown","AppBar","Tab"];
+
+    function detect(code) {
+      if (!code) return { tokens: [], components: [], violations: [] };
+      var tk = [], cp = [];
+      Object.keys(TK_MAP).forEach(function(k) { if (code.indexOf(k) !== -1) tk.push({ token: k, value: TK_MAP[k] }); });
+      COMPS.forEach(function(c) { if (code.toLowerCase().indexOf(c.toLowerCase()) !== -1) cp.push(c); });
+      return { tokens: tk, components: cp, violations: [] };
+    }
+
+    async function runTest(input, type, task, pIds, custom, td, lang) {
+      var personas = pIds.map(function(id) {
+        var p = P_DATA.find(function(x) { return x.id === id; });
+        return p ? p.emoji + " " + p.en + ": " + p.enId + ". Reveals: " + p.enR : "";
+      }).filter(Boolean);
+      if (custom) personas.push("Custom: " + custom);
+      var mmds = td.tokens.length > 0 ? "\nMMDS tokens: " + td.tokens.map(function(x) { return x.token; }).join(", ") : "";
+      var langI = lang === "ja" ? "\nWrite monologues and report in Japanese. JSON keys in English." : "";
+      var sys = "UX Stress Test Agent for MMDS. For each persona: raw first-person monologue. Then Risk Report." + langI + '\nJSON only:\n{"simulations":[{"persona_name":"","persona_emoji":"","context":"","monologue":"","pain_points":[]}],"risk_report":{"screen_name":"","critical":[{"title":"","triggered_by":[],"description":"","root_cause":"","mmds_token":null,"mmds_component":null,"wcag_ref":"","fix":"","severity":"Critical"}],"high":[],"medium":[],"low":[],"what_worked":[],"summary_matrix":[{"issue":"","personas":{}}]}}';
+      var r = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 4096, system: sys, messages: [{ role: "user", content: "Design(" + type + "):\n" + input + "\n\nTask: " + (task || "General.") + mmds + "\n\nPersonas:\n" + personas.join("\n") }] })
+      });
+      if (!r.ok) throw new Error("API " + r.status);
+      var data = await r.json();
+      var txt = data.content.map(function(c) { return c.text || ""; }).join("");
+      return JSON.parse(txt.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim());
+    }
+
+    function SevBadge(props) {
+      var colors = { Critical: ["#FEE2E2","#991B1B"], High: ["#FEF3C7","#92400E"], Medium: ["#DBEAFE","#1E40AF"], Low: ["#D1FAE5","#065F46"] };
+      var pair = colors[props.s] || colors.Medium;
+      return <span style={{ padding: "2px 8px", borderRadius: 9999, fontSize: 10, fontWeight: 600, background: pair[0], color: pair[1], textTransform: "uppercase" }}>{props.s}</span>;
+    }
+
+    function TokBadge(props) {
+      return (
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "2px 8px", borderRadius: 4, fontSize: 11, fontFamily: "monospace", background: "rgba(0,103,207,0.06)", color: "#055cb2", border: "1px solid rgba(0,103,207,0.12)" }}>
+          {props.value && <span style={{ width: 8, height: 8, borderRadius: 2, background: props.value, border: "1px solid rgba(0,0,0,0.1)" }} />}
+          {props.token}
+        </span>
+      );
+    }
+
+    function CompBadge(props) {
+      return <span style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "2px 8px", borderRadius: 4, fontSize: 11, fontFamily: "monospace", background: "rgba(22,35,49,0.05)", color: "#162331", border: "1px solid rgba(22,35,49,0.1)" }}>{"⬡ " + props.name}</span>;
+    }
+
+    function App() {
+      var _s = useState("en"), lang = _s[0], setLang = _s[1];
+      var _a = useState(0), step = _a[0], setStep = _a[1];
+      var _b = useState(""), di = _b[0], setDi = _b[1];
+      var _c = useState("html"), it = _c[0], setIt = _c[1];
+      var _d = useState(""), task = _d[0], setTask = _d[1];
+      var _e = useState([]), sp = _e[0], setSp = _e[1];
+      var _f = useState(""), cp = _f[0], setCp = _f[1];
+      var _g = useState(false), showCust = _g[0], setShowCust = _g[1];
+      var _h = useState(null), res = _h[0], setRes = _h[1];
+      var _i = useState(""), err = _i[0], setErr = _i[1];
+      var _j = useState(""), dots = _j[0], setDots = _j[1];
+      var _k = useState(0), mi = _k[0], setMi = _k[1];
+      var _l = useState("sim"), tab = _l[0], setTab = _l[1];
+      var _m = useState(0), openM = _m[0], setOpenM = _m[1];
+      var _n = useState(-1), openI = _n[0], setOpenI = _n[1];
+      var fileRef = useRef(null);
+      var td = detect(di);
+
+      useEffect(function() {
+        if (step !== 2) return;
+        var i = setInterval(function() { setDots(function(d) { return d.length >= 3 ? "" : d + "."; }); }, 500);
+        return function() { clearInterval(i); };
+      }, [step]);
+
+      useEffect(function() {
+        if (step !== 2) return;
+        var i = setInterval(function() { setMi(function(n) { return (n + 1) % 5; }); }, 3000);
+        return function() { clearInterval(i); };
+      }, [step]);
+
+      function tog(id) { setSp(function(p) { return p.indexOf(id) !== -1 ? p.filter(function(x) { return x !== id; }) : p.concat([id]); }); }
+      function handleFile(f) { if (!f) return; if (f.type.startsWith("image/")) { setDi("[Image: " + f.name + "]"); setIt("screenshot"); } else { var r = new FileReader(); r.onload = function(e) { setDi(e.target.result); setIt(f.name.endsWith(".html") ? "html" : "code"); }; r.readAsText(f); } }
+      async function run() { setStep(2); setErr(""); try { var data = await runTest(di, it, task, sp, cp, td, lang); setRes(data); setStep(3); setOpenM(0); } catch (e) { setErr(e.message); setStep(1); } }
+      function rst() { setStep(0); setDi(""); setIt("html"); setTask(""); setSp([]); setCp(""); setShowCust(false); setRes(null); setErr(""); setTab("sim"); }
+
+      var ok0 = di.trim().length > 0;
+      var ok1 = sp.length > 0 || (cp && cp.trim());
+      var rr = res ? (res.risk_report || {}) : {};
+      var allIss = [].concat(rr.critical || [], rr.high || [], rr.medium || [], rr.low || []);
+      var cn = { Critical: (rr.critical || []).length, High: (rr.high || []).length, Medium: (rr.medium || []).length, Low: (rr.low || []).length };
+
+      return (
+        <div style={{ minHeight: "100vh", background: "#F7F8FA", color: "#162331", fontFamily: "-apple-system, BlinkMacSystemFont, Hiragino Sans, sans-serif", fontSize: 14, lineHeight: 1.5 }}>
+          <style>{"@keyframes sp{to{transform:rotate(360deg)}}*{box-sizing:border-box;margin:0}button{font-family:inherit;cursor:pointer}"}</style>
+
+          <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: 48, padding: "0 20px", background: "#fff", borderBottom: "1px solid rgba(10,24,38,0.06)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ width: 26, height: 26, borderRadius: 5, background: "#0067cf", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#fff" }}>🧪</div>
+              <span style={{ fontSize: 14, fontWeight: 600 }}>{T("appTitle", lang)}</span>
+              <span style={{ padding: "1px 7px", borderRadius: 9999, fontSize: 9, fontWeight: 600, background: "rgba(0,103,207,0.08)", color: "#0067cf" }}>MMDS</span>
+            </div>
+            <div style={{ display: "flex", background: "#F3F4F6", borderRadius: 5, padding: 2 }}>
+              {["en", "ja"].map(function(l) {
+                return <button key={l} onClick={function() { setLang(l); }} style={{ padding: "2px 9px", borderRadius: 3, border: "none", fontSize: 10, fontWeight: 600, background: lang === l ? "#fff" : "transparent", color: lang === l ? "#0067cf" : "rgba(10,24,38,0.35)" }}>{l.toUpperCase()}</button>;
+              })}
+            </div>
+          </header>
+
+          <div style={{ maxWidth: 760, margin: "0 auto", padding: "24px 18px" }}>
+
+            <div style={{ display: "flex", alignItems: "center", margin: "0 auto 28px", maxWidth: 520 }}>
+              {[0,1,2,3].map(function(i) {
+                var dn = i < step, ac = i === step;
+                return (
+                  <div key={i} style={{ display: "flex", alignItems: "center", flex: 1 }}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
+                      <div style={{ width: 26, height: 26, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 600, background: dn ? "#0067cf" : ac ? "#fff" : "#F3F4F6", color: dn ? "#fff" : ac ? "#0067cf" : "#9CA3AF", border: "2px solid " + (dn || ac ? "#0067cf" : "#E5E7EB") }}>
+                        {dn ? "✓" : i + 1}
+                      </div>
+                      <span style={{ fontSize: 9, fontWeight: 600, color: ac ? "#0067cf" : dn ? "#162331" : "#9CA3AF", whiteSpace: "nowrap" }}>{D.steps[i][lang === "ja" ? 1 : 0]}</span>
+                    </div>
+                    {i < 3 && <div style={{ flex: 1, height: 2, margin: "0 5px", marginBottom: 16, background: dn ? "#0067cf" : "#E5E7EB" }} />}
+                  </div>
+                );
+              })}
+            </div>
+
+            {err && <div style={{ padding: 10, borderRadius: 8, background: "#FEF2F2", border: "1px solid #FECACA", color: "#991B1B", fontSize: 12, marginBottom: 14 }}>{"⚠ " + err}</div>}
+
+            {step === 0 && (
+              <div>
+                <h2 style={{ fontSize: 19, fontWeight: 600, marginBottom: 4 }}>{T("s1t", lang)}</h2>
+                <p style={{ color: "rgba(10,24,38,0.5)", fontSize: 13, marginBottom: 20 }}>{T("s1d", lang)}</p>
+                <div style={{ display: "flex", gap: 5, marginBottom: 10, flexWrap: "wrap" }}>
+                  {["html","code","screenshot","figma","description"].map(function(c, i) {
+                    return <button key={c} onClick={function() { setIt(c); }} style={{ padding: "3px 11px", borderRadius: 9999, fontSize: 11, fontWeight: it === c ? 600 : 400, border: "1px solid " + (it === c ? "#055cb2" : "rgba(10,24,38,0.08)"), background: it === c ? "rgba(0,103,207,0.08)" : "#fff", color: it === c ? "#055cb2" : "rgba(10,24,38,0.5)" }}>{D.chips[i][lang === "ja" ? 1 : 0]}</button>;
+                  })}
+                </div>
+                <div style={{ borderRadius: 8, border: "1px solid rgba(10,24,38,0.08)", background: "#fff" }}>
+                  <textarea value={di} onChange={function(e) { setDi(e.target.value); }} placeholder={T("ph", lang)} style={{ width: "100%", minHeight: 160, padding: 14, border: "none", borderRadius: 8, background: "transparent", color: "#162331", fontSize: 13, lineHeight: 1.6, fontFamily: (it === "html" || it === "code") ? "monospace" : "inherit", resize: "vertical", outline: "none", boxSizing: "border-box" }} />
+                </div>
+                {td.tokens.length > 0 && (
+                  <div style={{ marginTop: 8, padding: "8px 12px", borderRadius: 8, background: "rgba(0,103,207,0.04)", border: "1px solid rgba(0,103,207,0.1)", display: "flex", gap: 8 }}>
+                    <span>🔍</span>
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: "#055cb2" }}>{T("tokDet", lang) + " — " + td.tokens.length + " tokens"}</div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 3, marginTop: 4 }}>
+                        {td.tokens.slice(0, 5).map(function(x) { return <TokBadge key={x.token} token={x.token} value={x.value} />; })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <div style={{ marginTop: 14 }}>
+                  <label style={{ display: "block", marginBottom: 5, fontSize: 12, fontWeight: 600 }}>{"🎯 " + T("task", lang)}</label>
+                  <input type="text" value={task} onChange={function(e) { setTask(e.target.value); }} placeholder={T("taskPh", lang)} style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid rgba(10,24,38,0.08)", background: "#fff", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+                </div>
+                <input ref={fileRef} type="file" accept=".html,.jsx,.css,.png,.jpg,.svg" style={{ display: "none" }} onChange={function(e) { handleFile(e.target.files[0]); }} />
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 16 }}>
+                  <button onClick={function() { fileRef.current.click(); }} style={{ padding: "7px 12px", borderRadius: 8, border: "1px solid rgba(10,24,38,0.08)", background: "#fff", color: "rgba(10,24,38,0.5)", fontSize: 11 }}>{"📎 " + T("upload", lang)}</button>
+                  <button onClick={function() { setStep(1); }} disabled={!ok0} style={{ padding: "9px 22px", borderRadius: 8, border: "none", background: ok0 ? "#0067cf" : "#E5E7EB", color: ok0 ? "#fff" : "#9CA3AF", fontSize: 13, fontWeight: 600 }}>{T("next", lang) + " →"}</button>
+                </div>
+              </div>
+            )}
+
+            {step === 1 && (
+              <div>
+                <h2 style={{ fontSize: 19, fontWeight: 600, marginBottom: 4 }}>{T("s2t", lang)}</h2>
+                <p style={{ color: "rgba(10,24,38,0.5)", fontSize: 13, marginBottom: 20 }}>{T("s2d", lang)}</p>
+                {D.cats.map(function(cat, ci) {
+                  return (
+                    <div key={ci} style={{ marginBottom: 16 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                        <span style={{ padding: "2px 8px", borderRadius: 9999, fontSize: 10, fontWeight: 600, background: ci === 0 ? "rgba(0,103,207,0.08)" : "rgba(10,24,38,0.04)", color: ci === 0 ? "#0067cf" : "rgba(10,24,38,0.45)" }}>{cat[lang === "ja" ? 1 : 0]}</span>
+                        <span style={{ fontSize: 11, color: "rgba(10,24,38,0.3)" }}>{cat[lang === "ja" ? 3 : 2]}</span>
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 6 }}>
+                        {P_DATA.filter(function(p) { return p.cat === ci; }).map(function(raw) {
+                          var p = getP(raw, lang);
+                          var on = sp.indexOf(p.id) !== -1;
+                          return (
+                            <button key={p.id} onClick={function() { tog(p.id); }} style={{ padding: 12, borderRadius: 8, textAlign: "left", border: "1px solid " + (on ? p.color + "44" : "rgba(10,24,38,0.06)"), background: on ? p.color + "08" : "#fff", position: "relative" }}>
+                              {on && <span style={{ position: "absolute", top: 7, right: 8, width: 16, height: 16, borderRadius: "50%", background: p.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, color: "#fff" }}>✓</span>}
+                              <div style={{ fontSize: 18, marginBottom: 4 }}>{p.emoji}</div>
+                              <div style={{ fontSize: 12, fontWeight: 600, color: on ? p.color : "#162331", marginBottom: 2 }}>{p.name}</div>
+                              <div style={{ fontSize: 10, color: "rgba(10,24,38,0.4)", marginBottom: 4 }}>{p.identity}</div>
+                              <div style={{ fontSize: 10, color: "rgba(10,24,38,0.5)", padding: "4px 6px", background: "rgba(10,24,38,0.02)", borderRadius: 3 }}>{T("reveals", lang) + ": " + p.reveals}</div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+                <button onClick={function() { setShowCust(!showCust); }} style={{ width: "100%", padding: 10, borderRadius: 8, textAlign: "left", border: "1px dashed rgba(10,24,38,0.1)", background: "#fff", color: "rgba(10,24,38,0.45)", fontSize: 12, marginBottom: showCust ? 6 : 0 }}>{"🎭 " + (showCust ? T("customHide", lang) : T("customAdd", lang))}</button>
+                {showCust && <textarea value={cp} onChange={function(e) { setCp(e.target.value); }} placeholder={T("customPh", lang)} style={{ width: "100%", minHeight: 80, padding: 12, borderRadius: 8, border: "1px solid rgba(10,24,38,0.08)", background: "#fff", fontSize: 12, lineHeight: 1.5, resize: "vertical", outline: "none", boxSizing: "border-box" }} />}
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 16 }}>
+                  <button onClick={function() { setStep(0); }} style={{ padding: "9px 18px", borderRadius: 8, border: "1px solid rgba(10,24,38,0.08)", background: "#fff", color: "rgba(10,24,38,0.5)", fontSize: 13 }}>{"← " + T("back", lang)}</button>
+                  <button onClick={run} disabled={!ok1} style={{ padding: "9px 22px", borderRadius: 8, border: "none", background: ok1 ? "#0067cf" : "#E5E7EB", color: ok1 ? "#fff" : "#9CA3AF", fontSize: 13, fontWeight: 600 }}>{T("run", lang) + " →"}</button>
+                </div>
+              </div>
+            )}
+
+            {step === 2 && (
+              <div style={{ textAlign: "center", padding: "40px 0" }}>
+                <div style={{ position: "relative", width: 56, height: 56, margin: "0 auto 20px" }}>
+                  <div style={{ width: 56, height: 56, borderRadius: "50%", border: "3px solid #E5E7EB", borderTopColor: "#0067cf", animation: "sp 1s linear infinite" }} />
+                  <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", fontSize: 22 }}>🧪</div>
+                </div>
+                <h2 style={{ fontSize: 17, fontWeight: 600, marginBottom: 5 }}>{T("s3t", lang) + dots}</h2>
+                <p style={{ color: "#0067cf", fontSize: 12, fontWeight: 500 }}>{D.s3m[mi][lang === "ja" ? 1 : 0]}</p>
+              </div>
+            )}
+
+            {step === 3 && res && (
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+                  <div>
+                    <h2 style={{ fontSize: 19, fontWeight: 600, marginBottom: 3 }}>{T("s4t", lang)}</h2>
+                    <p style={{ color: "rgba(10,24,38,0.4)", fontSize: 12 }}>{rr.screen_name}</p>
+                    {task && <div style={{ display: "inline-block", marginTop: 5, padding: "2px 9px", borderRadius: 9999, background: "rgba(0,103,207,0.06)", fontSize: 10, color: "#055cb2" }}>{"🎯 " + task}</div>}
+                  </div>
+                  <button onClick={rst} style={{ padding: "6px 14px", borderRadius: 8, border: "1px solid rgba(10,24,38,0.08)", background: "#fff", color: "rgba(10,24,38,0.45)", fontSize: 11 }}>{"↻ " + T("newT", lang)}</button>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginBottom: 16 }}>
+                  {["Critical","High","Medium","Low"].map(function(s) {
+                    var cl = {Critical:"#DC2626",High:"#D97706",Medium:"#2563EB",Low:"#059669"};
+                    return <div key={s} style={{ padding: "10px 12px", borderRadius: 8, background: "#fff", textAlign: "center" }}><div style={{ fontSize: 22, fontWeight: 700, color: cl[s] }}>{cn[s]}</div><div style={{ fontSize: 9, fontWeight: 600, color: "rgba(10,24,38,0.35)", textTransform: "uppercase" }}>{s}</div></div>;
+                  })}
+                </div>
+                <div style={{ display: "flex", gap: 2, marginBottom: 14, background: "#F3F4F6", padding: 2, borderRadius: 8 }}>
+                  {["sim","iss","mat","win"].map(function(k, i) {
+                    return <button key={k} onClick={function() { setTab(k); }} style={{ flex: 1, padding: "6px 8px", borderRadius: 6, border: "none", background: tab === k ? "#fff" : "transparent", color: tab === k ? "#162331" : "rgba(10,24,38,0.35)", fontSize: 11, fontWeight: 600 }}>{D.tabs[i][lang === "ja" ? 1 : 0]}</button>;
+                  })}
+                </div>
+
+                {tab === "sim" && (res.simulations || []).map(function(s, i) {
+                  var isOpen = openM === i;
+                  return (
+                    <div key={i} style={{ borderRadius: 8, border: "1px solid rgba(10,24,38,0.06)", background: "#fff", marginBottom: 6 }}>
+                      <button onClick={function() { setOpenM(isOpen ? -1 : i); }} style={{ width: "100%", padding: "10px 14px", border: "none", background: "transparent", display: "flex", alignItems: "center", gap: 8, textAlign: "left" }}>
+                        <span style={{ fontSize: 18 }}>{s.persona_emoji}</span>
+                        <div style={{ flex: 1 }}><div style={{ fontSize: 12, fontWeight: 600, color: "#0067cf" }}>{s.persona_name}</div><div style={{ fontSize: 10, color: "rgba(10,24,38,0.35)" }}>{s.context}</div></div>
+                        <span style={{ color: "rgba(10,24,38,0.2)" }}>{isOpen ? "▴" : "▾"}</span>
+                      </button>
+                      {isOpen && <div style={{ padding: "0 14px 14px" }}>
+                        <div style={{ padding: 12, borderRadius: 6, background: "#FAFAFA", borderLeft: "3px solid #0067cf", fontStyle: "italic", fontSize: 12, lineHeight: 1.7, color: "rgba(10,24,38,0.6)", whiteSpace: "pre-wrap" }}>{s.monologue}</div>
+                        {s.pain_points && s.pain_points.length > 0 && <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 3 }}>{s.pain_points.map(function(pp, j) { return <span key={j} style={{ padding: "2px 7px", borderRadius: 4, fontSize: 10, background: "rgba(0,103,207,0.05)", color: "#0067cf", border: "1px solid rgba(0,103,207,0.1)" }}>{pp}</span>; })}</div>}
+                      </div>}
+                    </div>
+                  );
+                })}
+
+                {tab === "iss" && (allIss.length > 0 ? allIss.map(function(issue, i) {
+                  var isO = openI === i;
+                  return (
+                    <div key={i} style={{ borderRadius: 8, border: "1px solid rgba(10,24,38,0.06)", background: "#fff", marginBottom: 6 }}>
+                      <button onClick={function() { setOpenI(isO ? -1 : i); }} style={{ width: "100%", padding: "10px 14px", border: "none", background: "transparent", display: "flex", alignItems: "center", gap: 8, textAlign: "left" }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2, flexWrap: "wrap" }}><SevBadge s={issue.severity} /><span style={{ fontSize: 12, fontWeight: 600 }}>{issue.title}</span></div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}><span style={{ fontSize: 10, color: "rgba(10,24,38,0.35)" }}>{T("trig", lang) + ": " + (issue.triggered_by || []).join(", ")}</span>{issue.mmds_component && <CompBadge name={issue.mmds_component} />}</div>
+                        </div>
+                        <span style={{ color: "rgba(10,24,38,0.2)" }}>{isO ? "▴" : "▾"}</span>
+                      </button>
+                      {isO && <div style={{ padding: "0 14px 14px" }}>
+                        <div style={{ fontSize: 12, color: "rgba(10,24,38,0.55)", lineHeight: 1.5, marginBottom: 10 }}>{issue.description}</div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                          <div style={{ padding: 8, borderRadius: 6, background: "#FAFAFA" }}><div style={{ fontSize: 9, fontWeight: 600, color: "rgba(10,24,38,0.3)", textTransform: "uppercase", marginBottom: 3 }}>{T("root", lang)}</div><div style={{ fontSize: 11, color: "rgba(10,24,38,0.6)" }}>{issue.root_cause}</div></div>
+                          <div style={{ padding: 8, borderRadius: 6, background: "#FAFAFA" }}><div style={{ fontSize: 9, fontWeight: 600, color: "rgba(10,24,38,0.3)", textTransform: "uppercase", marginBottom: 3 }}>{T("dsref", lang)}</div><div style={{ display: "flex", flexDirection: "column", gap: 3 }}>{issue.mmds_token && <TokBadge token={String(issue.mmds_token).split(" ")[0]} />}{issue.mmds_component && <CompBadge name={issue.mmds_component} />}<span style={{ fontSize: 10, color: "rgba(10,24,38,0.4)" }}>{issue.wcag_ref}</span></div></div>
+                        </div>
+                        <div style={{ marginTop: 6, padding: 8, borderRadius: 6, background: "rgba(0,103,207,0.03)", border: "1px solid rgba(0,103,207,0.08)" }}><div style={{ fontSize: 9, fontWeight: 600, color: "#0067cf", textTransform: "uppercase", marginBottom: 3 }}>{T("fix", lang)}</div><div style={{ fontSize: 11, color: "rgba(10,24,38,0.6)", lineHeight: 1.4 }}>{issue.fix}</div></div>
+                      </div>}
+                    </div>
+                  );
+                }) : <p style={{ textAlign: "center", color: "rgba(10,24,38,0.25)", padding: 24, fontSize: 12 }}>{T("noIss", lang)}</p>)}
+
+                {tab === "mat" && (
+                  <div style={{ overflowX: "auto", borderRadius: 8, border: "1px solid rgba(10,24,38,0.06)", background: "#fff" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+                      <thead><tr style={{ borderBottom: "1px solid rgba(10,24,38,0.06)" }}>
+                        <th style={{ padding: "8px 12px", textAlign: "left", color: "rgba(10,24,38,0.35)", fontSize: 9, textTransform: "uppercase" }}>Issue</th>
+                        {(res.simulations || []).map(function(s, i) { return <th key={i} style={{ padding: "8px 10px", textAlign: "center", fontSize: 14 }}>{s.persona_emoji}</th>; })}
+                      </tr></thead>
+                      <tbody>{(rr.summary_matrix || []).map(function(row, i) {
+                        return <tr key={i} style={{ borderBottom: "1px solid rgba(10,24,38,0.03)" }}>
+                          <td style={{ padding: "8px 12px", color: "rgba(10,24,38,0.6)" }}>{row.issue}</td>
+                          {(res.simulations || []).map(function(s, j) { var v = (row.personas || {})[s.persona_name] || "na"; return <td key={j} style={{ padding: "6px 10px", textAlign: "center", fontSize: 13 }}>{v === "blocked" ? "🔴" : v === "confused" ? "🟡" : v === "ok" ? "🟢" : "—"}</td>; })}
+                        </tr>;
+                      })}</tbody>
+                    </table>
+                  </div>
+                )}
+
+                {tab === "win" && (
+                  <div style={{ padding: 14, borderRadius: 8, background: "rgba(5,150,105,0.03)", border: "1px solid rgba(5,150,105,0.1)" }}>
+                    {(rr.what_worked || []).length > 0
+                      ? (rr.what_worked || []).map(function(w, i) { return <div key={i} style={{ padding: "6px 0", borderBottom: i < rr.what_worked.length - 1 ? "1px solid rgba(5,150,105,0.08)" : "none", color: "rgba(10,24,38,0.55)", fontSize: 12, lineHeight: 1.4 }}>{"✓ " + w}</div>; })
+                      : <p style={{ textAlign: "center", color: "rgba(10,24,38,0.25)", fontSize: 12 }}>{T("noWin", lang)}</p>}
+                  </div>
+                )}
+              </div>
+            )}
+
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
